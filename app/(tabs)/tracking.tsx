@@ -34,6 +34,7 @@ const defaultRegion = {
 const Index = () => {
   const { devices, positions, updatePositions } = useStore();
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   //refs
   const mapRef = useRef<MapView>(null);
@@ -112,10 +113,11 @@ const Index = () => {
 
   const [filteredDevices, setFilteredDevices] = useState(devices);
 
-  // Filter devices based on selected status
+  // Update filtered devices to include search functionality
   useEffect(() => {
     let filtered = [...devices];
 
+    // Filter by status
     if (state?.selectedStatus?.toLowerCase() === "active") {
       filtered = devices.filter((device) =>
         positions.some(
@@ -131,8 +133,18 @@ const Index = () => {
       );
     }
 
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (device) =>
+          device.name.toLowerCase().includes(query) ||
+          device.uniqueId.toLowerCase().includes(query)
+      );
+    }
+
     setFilteredDevices(filtered);
-  }, [devices, positions, state.selectedStatus]);
+  }, [devices, positions, state.selectedStatus, searchQuery]);
 
   // Calculate filtered positions for map view
   const filteredPositions = useMemo(() => {
@@ -153,6 +165,11 @@ const Index = () => {
   const handleStatusChange = useCallback((option: DropdownOption) => {
     setState((prev) => ({ ...prev, selectedStatus: option.label }));
   }, []);
+
+  const handleSearch = useCallback((text: string) => {
+    setSearchQuery(text);
+  }, []);
+
   const handleonPressDeviceCard = useCallback((data: any) => {
     setState((prev) => ({
       ...prev,
@@ -323,6 +340,8 @@ const Index = () => {
               onViewChange={handleViewChange}
               onDateChange={handleDateChange}
               onStatusChange={handleStatusChange}
+              onSearch={handleSearch}
+              searchValue={searchQuery}
               style={{ position: "relative" }}
             />
             <ScrollView
@@ -346,6 +365,7 @@ const Index = () => {
                           : () => {}
                       } // Disable press if no position
                       disabled={!position} // Style differently if no position
+                      from={'Card'}
                     />
                   );
                 })
@@ -372,6 +392,8 @@ const Index = () => {
             onViewChange={handleViewChange}
             onDateChange={handleDateChange}
             onStatusChange={handleStatusChange}
+            onSearch={handleSearch}
+            searchValue={searchQuery}
             style={styles.absolute_header}
           />
           {location && (

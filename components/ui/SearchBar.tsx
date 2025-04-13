@@ -6,13 +6,27 @@ import React from "react";
 import { StyleSheet, TextInput, View, ViewStyle } from "react-native";
 
 type Props = {
-  containerStyle?: ViewStyle
+  containerStyle?: ViewStyle;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
 };
 
-const SearchBar = ({containerStyle}: Props) => {
+const SearchBar = ({
+  containerStyle,
+  value,
+  onChangeText,
+  placeholder = "Search Fleet"
+}: Props) => {
   return (
-    <View style={styles.container}>
-      <TextInput style={styles.input} placeholder="Search Fleet" placeholderTextColor={Colors.subText}/>
+    <View style={[styles.container, containerStyle]}>
+      <TextInput
+        style={styles.input}
+        placeholder={placeholder}
+        placeholderTextColor={Colors.subText}
+        value={value}
+        onChangeText={onChangeText}
+      />
       <Image
         source={require("@/assets/icons/search-normal.svg")}
         style={[Styles.icon_24_res]}
@@ -35,9 +49,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    // backgroundColor: 'red',
     fontSize: DynamicSize(14),
     height: DynamicSize(40),
+    color: Colors.title,
   },
 });
 

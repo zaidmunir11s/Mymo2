@@ -19,9 +19,16 @@ type Props = {
   device?: any;
   position?: Position;
   onPress?: () => {};
+  from?: "Card" | "Map";
 };
 
-const DeviceCard = ({ fromMap = false, device, position, onPress }: Props) => {
+const DeviceCard = ({
+  fromMap = false,
+  device,
+  position,
+  onPress,
+  from,
+}: Props) => {
   const [showAddress, setShowAddress] = useState(false);
   const [loadingAddress, setLoadingAddress] = useState(false);
   const [fetchedAddress, setFetchedAddress] = useState<string>("");
@@ -40,7 +47,11 @@ const DeviceCard = ({ fromMap = false, device, position, onPress }: Props) => {
   useEffect(() => {
     setShowAddress(false);
     setFetchedAddress("");
-  }, [position]);
+    // Automatically fetch address if in Map View
+    if (fromMap && active && position?.latitude && position?.longitude) {
+      fetchAddress();
+    }
+  }, [position, fromMap]);
 
   const fetchAddress = async () => {
     if (!position?.latitude || !position?.longitude) return;
@@ -51,12 +62,13 @@ const DeviceCard = ({ fromMap = false, device, position, onPress }: Props) => {
         position.longitude
       );
       setFetchedAddress(response || "Unknown location");
+      setShowAddress(true);
     } catch (error) {
       console.error("Error fetching address:", error);
       setFetchedAddress("Unknown location");
+      setShowAddress(true);
     } finally {
       setLoadingAddress(false);
-      setShowAddress(true);
     }
   };
 
@@ -78,7 +90,7 @@ const DeviceCard = ({ fromMap = false, device, position, onPress }: Props) => {
       {/* Device Name */}
       <View style={[Styles.row, { gap: DynamicSize(16) }]}>
         <Image
-          source={require('@/assets/images/phone.png')}
+          source={require("@/assets/images/phone.png")}
           style={[Styles.icon_40_res, { borderRadius: DynamicSize(6) }]}
         />
 
@@ -146,35 +158,27 @@ const DeviceCard = ({ fromMap = false, device, position, onPress }: Props) => {
           { width: "100%", borderTopWidth: 1, borderTopColor: Colors.grey_10 },
         ]}
       >
-        <Image
-          source={require("@/assets/icons/location.svg")}
-          style={[Styles.icon_20_res]}
-        />
+        {from !== "Card" && (
+          <>
+            <Image
+              source={require("@/assets/icons/location.svg")}
+              style={[Styles.icon_20_res]}
+            />
 
-        <View style={[Styles.gap_4, { width: "65%" }]}>
-          <StyledText type="small" color={Colors.grey_50}>
-            Last Location
-          </StyledText>
-          {showAddress ? (
-            loadingAddress ? (
-              <ActivityIndicator size="small" color={Colors.tint} />
-            ) : (
-              <StyledText type="subHeading" color={Colors.grey_90}>
-                {address}
+            <View style={[Styles.gap_4, { width: "65%" }]}>
+              <StyledText type="small" color={Colors.grey_50}>
+                Last Location
               </StyledText>
-            )
-          ) : (
-            <TouchableOpacity
-              onPress={fetchAddress}
-              style={styles.showAddressButton}
-              disabled={!active}
-            >
-              <StyledText type="small" color={Colors.tint}>
-                Show Address
-              </StyledText>
-            </TouchableOpacity>
-          )}
-        </View>
+              {loadingAddress ? (
+                <ActivityIndicator size="small" color={Colors.tint} />
+              ) : (
+                <StyledText type="subHeading" color={Colors.grey_90}>
+                  {address}
+                </StyledText>
+              )}
+            </View>
+          </>
+        )}
 
         <StyledText
           type="subHeading"

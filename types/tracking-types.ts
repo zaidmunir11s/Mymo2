@@ -29,6 +29,8 @@ export interface TrackingHeaderProps {
   onViewChange: (option: DropdownOption) => void;
   onDateChange: (option: DropdownOption) => void;
   onStatusChange: (option: DropdownOption) => void;
+  onSearch: (text: string) => void;
+  searchValue: string;
   style?: object;
 }
 

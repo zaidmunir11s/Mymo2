@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { DynamicSize } from "@/constants/helpers";
 import StyledText from "@/components/StyledText";
 import { Colors } from "@/constants/Colors";
@@ -19,6 +19,8 @@ const TrackingHeader: React.FC<TrackingHeaderProps> = React.memo(
     onViewChange,
     onDateChange,
     onStatusChange,
+    onSearch,
+    searchValue,
     style,
   }) => {
     // Memoize the dropdown styles
@@ -37,12 +39,6 @@ const TrackingHeader: React.FC<TrackingHeaderProps> = React.memo(
       []
     );
 
-    let bgColor =
-      viewOptions.find((item) => item.label === selectedView)?.label ===
-      "Card View"
-        ? Colors.grey_10
-        : Colors.white;
-
     return (
       <View style={[styles.header, style]}>
         <StyledText
@@ -50,10 +46,35 @@ const TrackingHeader: React.FC<TrackingHeaderProps> = React.memo(
           color={Colors.title}
           textStyle={{ fontWeight: 600 }}
         >
-         Tracking
+          Tracking
         </StyledText>
 
-        <SearchBar />
+        <View style={styles.tabContainer}>
+          {viewOptions.map((option) => (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.tab,
+                selectedView === option.label && styles.activeTab,
+              ]}
+              onPress={() => onViewChange(option)}
+            >
+              <StyledText
+                type="body"
+                color={selectedView === option.label ? Colors.white : Colors.grey_70}
+              >
+                {option.label}
+              </StyledText>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <SearchBar
+          value={searchValue}
+          onChangeText={onSearch}
+          placeholder="Search by device name or ID"
+        />
+
         <View style={[Styles.gap_10, Styles.row]}>
           <CustomDropdown
             placeholder="Choose an option"
@@ -64,18 +85,6 @@ const TrackingHeader: React.FC<TrackingHeaderProps> = React.memo(
             items={dateOptions}
             onSelect={onDateChange}
             value={dateOptions.find((item) => item.label === selectedDate)}
-            buttonStyle={{ backgroundColor: bgColor }}
-          />
-          <CustomDropdown
-            placeholder="Choose an option"
-            itemWidth={DynamicSize(150)}
-            labelFontSize={DynamicSize(14)}
-            itemFontSize={DynamicSize(16)}
-            containerStyle={dropdownStyle}
-            items={viewOptions}
-            onSelect={onViewChange}
-            value={viewOptions.find((item) => item.label === selectedView)}
-            buttonStyle={{ backgroundColor: bgColor }}
           />
           <CustomDropdown
             placeholder="Choose an option"
@@ -87,7 +96,6 @@ const TrackingHeader: React.FC<TrackingHeaderProps> = React.memo(
             items={statusOptions}
             onSelect={onStatusChange}
             value={statusOptions.find((item) => item.label === selectedStatus)}
-            buttonStyle={{ backgroundColor: bgColor }}
           />
         </View>
       </View>
@@ -100,6 +108,24 @@ const styles = StyleSheet.create({
     zIndex: 1,
     width: "100%",
     gap: DynamicSize(24),
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: Colors.grey_10,
+    borderRadius: DynamicSize(10),
+    padding: DynamicSize(4),
+    marginBottom: DynamicSize(8),
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: DynamicSize(8),
+    paddingHorizontal: DynamicSize(16),
+    borderRadius: DynamicSize(8),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTab: {
+    backgroundColor: Colors.tint,
   },
 });
 
