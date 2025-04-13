@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   },
   absolute_header: {
     position: "absolute",
-    top: DynamicSize(100),
+    top: DynamicSize(80),
     left: DynamicSize(24),
     zIndex: 1,
     width: "88%",

@@ -50,10 +50,7 @@ const TrackingHeader: React.FC<TrackingHeaderProps> = React.memo(
           color={Colors.title}
           textStyle={{ fontWeight: 600 }}
         >
-          {viewOptions.find((item) => item.label === selectedView)?.label ===
-          "Card View"
-            ? "Device Tracking"
-            : "Tracking"}
+         Tracking
         </StyledText>
 
         <SearchBar />
