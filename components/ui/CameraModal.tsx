@@ -58,7 +58,7 @@ const CameraModal: React.FC<CameraModalProps> = ({
 
   const handleBarcodeScanned = (scanningResult: BarcodeScanningResult) => {
     if (!scanned && scanningResult.data) {
-      console.log(scanningResult);
+
       setScanned(true);
       onScan(scanningResult.data);
       onClose();

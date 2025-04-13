@@ -307,7 +307,6 @@ const Index = () => {
         );
       }
     }
-    console.log("worked called==>");
   }, [positions, state.selectedDevice, updatePositions]);
 
   if (loading) {

@@ -101,7 +101,6 @@ export const DeleteAccount = async ({ id }: { id: string }) => {
         "Content-Type": "application/json",
       },
     });
-    console.log("Account deleted:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error deleting account:", error);
@@ -129,15 +128,12 @@ export const register = async ({
     fixedEmail: true,
   };
 
-  console.log("Sending payload:", payload);
   try {
     const response = await axiosInstance.post("/users", payload, {
       headers: {
         "Content-Type": "application/json",
       },
     });
-
-    console.log("Register Response:", response.data);
 
     await AsyncStorage.setItem("session", JSON.stringify(response.data));
     await AsyncStorage.setItem(

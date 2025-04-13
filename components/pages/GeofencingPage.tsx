@@ -71,7 +71,6 @@ const GeoFenceScreen = () => {
 
   // Parse geofence area function
 
-  console.log("ya h data", fenceData);
   const parseGeofenceArea = (area: string) => {
     if (area.startsWith("CIRCLE")) {
       const match = area.match(/CIRCLE\s*\(([\d.-]+) ([\d.-]+), ([\d.]+)\)/);

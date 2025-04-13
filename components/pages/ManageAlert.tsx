@@ -93,7 +93,6 @@ const ManageAlert = () => {
           Authorization: `Basic ${token}`,
         },
       });
-      console.log("this is response dat==>", response?.data);
       return response?.data;
     } catch (error) {
       console.error("Error fetching alerts:", error);
@@ -112,7 +111,6 @@ const ManageAlert = () => {
   const toggleSwitch = async (item: any) => {
     //toggle
     const toggledActiveAlert = !item?.attributes?.activeAlert;
-    console.log("item isss==>", item);
 
     const payload = {
       id: item?.id,
@@ -130,7 +128,6 @@ const ManageAlert = () => {
         activeAlert: toggledActiveAlert,
       },
     };
-    console.log("payload id is", payload);
     try {
       const response = await axiosInstance.put(
         `${API_URL}/notifications/${item?.id}`,
@@ -177,7 +174,6 @@ const ManageAlert = () => {
           Authorization: `Basic ${token}`,
         },
       });
-      console.log("Delete Alert Response:", response);
       queryClient.invalidateQueries(["notifications"]);
     } catch (error) {
       console.log("error deleting notificiation", error);
