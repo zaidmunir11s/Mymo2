@@ -569,16 +569,6 @@ const Index = () => {
           )}
 
           {/* Route Toggle Button */}
-          {state.selectedDevice && (
-            <TouchableOpacity
-              style={[styles.toggleButton, showRoutePath ? styles.toggleButtonActive : {}]}
-              onPress={toggleRouteVisibility}
-            >
-              <StyledText type="small" color={showRoutePath ? Colors.white : Colors.tint}>
-                {showRoutePath ? 'Hide Route' : 'Show Route'}
-              </StyledText>
-            </TouchableOpacity>
-          )}
 
           {state.selectedDevice && (
             <DeviceCard
@@ -642,7 +632,7 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     position: 'absolute',
-    bottom: DynamicSize(200),
+    bottom: DynamicSize(400),
     right: DynamicSize(20),
     backgroundColor: Colors.white,
     borderRadius: DynamicSize(20),
