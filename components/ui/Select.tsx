@@ -375,8 +375,10 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
   const selectItem = (item: DropdownItem) => {
     setSelected(item);
+    onSelect(item);
     onSelect?.(item);
     toggleDropdown();
+    setIsOpen(false);
   };
 
   useEffect(() => {

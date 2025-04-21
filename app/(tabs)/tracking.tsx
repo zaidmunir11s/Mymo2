@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { ScrollView, StyleSheet, View, ActivityIndicator, Image } from "react-native";
+import { ScrollView, StyleSheet, View, ActivityIndicator, Image, TouchableOpacity, Modal } from "react-native";
 import MapView, { UrlTile, Marker } from "react-native-maps";
 import PageWrapper from "@/components/wrapper/PageWrapper";
 import { DynamicSize } from "@/constants/helpers";
@@ -20,9 +20,13 @@ import { Colors } from "@/constants/Colors";
 import StyledText from "@/components/StyledText";
 import { Buffer } from "buffer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import RoutePath from "@/components/RoutePath";
+import { getPeriodRange } from "@/utils/timeUtils";
+import Button from "@/components/ui/Button";
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-const CAR_ICON = require("@/assets/images/car.png"); // Import the car image
-const SELECTED_CAR_ICON = require("@/assets/images/selectedCar.png"); // Import the car image
+const CAR_ICON = require("@/assets/images/car.png");
+const SELECTED_CAR_ICON = require("@/assets/images/selectedCar.png");
 
 const defaultRegion = {
   latitude: 24.7136,
@@ -31,56 +35,155 @@ const defaultRegion = {
   longitudeDelta: 0.1,
 };
 
+// Time period options
+const TIME_PERIODS: DropdownOption[] = [
+  { id: "Today", label: "Today", name: "Today" },
+  { id: "Yesterday", label: "Yesterday", name: "Yesterday" },
+  { id: "This Week", label: "This Week", name: "This Week" },
+  { id: "Previous Week", label: "Previous Week", name: "Previous Week" },
+  { id: "This Month", label: "This Month", name: "This Month" },
+  { id: "Previous Month", label: "Previous Month", name: "Previous Month" },
+  { id: "Custom", label: "Custom", name: "Custom" },
+];
+
+// DateRangePicker component
+const DateRangePicker = ({ visible, onClose, onConfirm }) => {
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(new Date());
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
+
+  const handleFromChange = (event, selectedDate) => {
+    const currentDate = selectedDate || fromDate;
+    setShowFromPicker(false);
+    setFromDate(currentDate);
+  };
+
+  const handleToChange = (event, selectedDate) => {
+    const currentDate = selectedDate || toDate;
+    setShowToPicker(false);
+    setToDate(currentDate);
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.datePickerContainer}>
+          <StyledText type="body" weight={600} color={Colors.grey_100}>
+            Select Date Range
+          </StyledText>
+
+          <View style={styles.dateSelectors}>
+            <View style={styles.dateSelector}>
+              <StyledText type="subHeading" color={Colors.grey_80}>
+                From Date
+              </StyledText>
+              <TouchableOpacity 
+                style={styles.dateButton} 
+                onPress={() => setShowFromPicker(true)}
+              >
+                <StyledText type="body" color={Colors.grey_100}>
+                  {fromDate.toDateString()}
+                </StyledText>
+              </TouchableOpacity>
+              {showFromPicker && (
+                <DateTimePicker
+                  value={fromDate}
+                  mode="date"
+                  display="default"
+                  onChange={handleFromChange}
+                />
+              )}
+            </View>
+
+            <View style={styles.dateSelector}>
+              <StyledText type="subHeading" color={Colors.grey_80}>
+                To Date
+              </StyledText>
+              <TouchableOpacity 
+                style={styles.dateButton} 
+                onPress={() => setShowToPicker(true)}
+              >
+                <StyledText type="body" color={Colors.grey_100}>
+                  {toDate.toDateString()}
+                </StyledText>
+              </TouchableOpacity>
+              {showToPicker && (
+                <DateTimePicker
+                  value={toDate}
+                  mode="date"
+                  display="default"
+                  onChange={handleToChange}
+                />
+              )}
+            </View>
+          </View>
+
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.button, styles.cancelButton]} 
+              onPress={onClose}
+            >
+              <StyledText type="body" color={Colors.grey_100}>
+                Cancel
+              </StyledText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.confirmButton]} 
+              onPress={() => {
+                // Set from date to beginning of day
+                const from = new Date(fromDate);
+                from.setHours(0, 0, 0, 0);
+                
+                // Set to date to end of day
+                const to = new Date(toDate);
+                to.setHours(23, 59, 59, 999);
+                
+                onConfirm(from.toISOString(), to.toISOString());
+              }}
+            >
+              <StyledText type="body" color={Colors.white}>
+                Confirm
+              </StyledText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const Index = () => {
   const { devices, positions, updatePositions } = useStore();
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  //refs
+  // refs
   const mapRef = useRef<MapView>(null);
 
-  // Generate current date and 3 previous dates for dropdown
-  const generateDateOptions = () => {
-    const options = [];
-    const today = new Date();
+  // Route path state
+  const [showRoutePath, setShowRoutePath] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState(TIME_PERIODS[0]);
+  const [selectedFromDate, setSelectedFromDate] = useState("");
+  const [selectedToDate, setSelectedToDate] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-    for (let i = 0; i < 4; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-
-      const day = date.getDate();
-      const monthNames = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ];
-      const month = monthNames[date.getMonth()];
-      const year = date.getFullYear();
-
-      options.push({
-        id: i + 1,
-        label: `${day} ${month} ${year}`,
-      });
-    }
-
-    return options;
-  };
-
-  const dateOptions = useMemo(() => generateDateOptions(), []);
+  // Initialize with today's date range
+  useEffect(() => {
+    const { from, to } = getPeriodRange("Today");
+    setSelectedFromDate(from);
+    setSelectedToDate(to);
+  }, []);
 
   const viewOptions = useMemo<DropdownOption[]>(
     () => [
-      { id: "Map View", label: "Map View" },
-      { id: "Card View", label: "Card View" },
+      { id: "Map View", label: "Map View", name: "Map View" },
+      { id: "Card View", label: "Card View", name: "Card View" },
     ],
     []
   );
@@ -95,9 +198,9 @@ const Index = () => {
     const inactiveDevices = devices.length - activeDevices;
 
     return [
-      { id: "all", label: "All", count: devices.length },
-      { id: "active", label: "Active", count: activeDevices },
-      { id: "inactive", label: "Inactive", count: inactiveDevices },
+      { id: "all", label: "All", count: devices.length, name: "All" },
+      { id: "active", label: "Active", count: activeDevices, name: "Active" },
+      { id: "inactive", label: "Inactive", count: inactiveDevices, name: "Inactive" },
     ];
   }, [devices, positions]);
 
@@ -107,7 +210,7 @@ const Index = () => {
     markers: [],
     selectedDevice: null,
     selectedView: "Card View",
-    selectedDate: dateOptions[0]?.label || "Today",
+    selectedDate: TIME_PERIODS[0].label,
     selectedStatus: "All",
   });
 
@@ -158,9 +261,28 @@ const Index = () => {
     setState((prev) => ({ ...prev, selectedView: option.label }));
   }, []);
 
-  const handleDateChange = useCallback((option: DropdownOption) => {
+  const handlePeriodChange = useCallback((option: DropdownOption) => {
     setState((prev) => ({ ...prev, selectedDate: option.label }));
+    setSelectedPeriod(option);
+    
+    if (option.id === "Custom") {
+      // Show date picker for custom date range
+      setShowDatePicker(true);
+    } else {
+      // Set date range for route path
+      const { from, to } = getPeriodRange(option.id);
+      setSelectedFromDate(from);
+      setSelectedToDate(to);
+      setShowRoutePath(true);
+    }
   }, []);
+
+  const handleCustomDateConfirm = (from, to) => {
+    setSelectedFromDate(from);
+    setSelectedToDate(to);
+    setShowDatePicker(false);
+    setShowRoutePath(true);
+  };
 
   const handleStatusChange = useCallback((option: DropdownOption) => {
     setState((prev) => ({ ...prev, selectedStatus: option.label }));
@@ -192,13 +314,25 @@ const Index = () => {
         longitudeDelta: 0.05,
       });
     }
+    
+    // Enable route path visualization when a device is selected
+    setShowRoutePath(true);
   }, []);
+  
   const handleMarkerPress = useCallback((marker: any) => {
     setState((prev) => ({
       ...prev,
       selectedDevice: prev.selectedDevice?.id === marker.id ? null : marker,
     }));
+    
+    // Enable route path visualization when a marker is selected
+    setShowRoutePath(true);
   }, []);
+
+  // Toggle route visibility
+  const toggleRouteVisibility = () => {
+    setShowRoutePath(!showRoutePath);
+  };
 
   // Find corresponding device for a position
   const findDeviceForPosition = (positionId: any) => {
@@ -333,11 +467,11 @@ const Index = () => {
               selectedView={state.selectedView}
               selectedDate={state.selectedDate}
               selectedStatus={state.selectedStatus}
-              dateOptions={dateOptions}
+              dateOptions={TIME_PERIODS}
               viewOptions={viewOptions}
               statusOptions={statusOptions}
               onViewChange={handleViewChange}
-              onDateChange={handleDateChange}
+              onDateChange={handlePeriodChange}
               onStatusChange={handleStatusChange}
               onSearch={handleSearch}
               searchValue={searchQuery}
@@ -385,11 +519,11 @@ const Index = () => {
             selectedView={state.selectedView}
             selectedDate={state.selectedDate}
             selectedStatus={state.selectedStatus}
-            dateOptions={dateOptions}
+            dateOptions={TIME_PERIODS}
             viewOptions={viewOptions}
             statusOptions={statusOptions}
             onViewChange={handleViewChange}
-            onDateChange={handleDateChange}
+            onDateChange={handlePeriodChange}
             onStatusChange={handleStatusChange}
             onSearch={handleSearch}
             searchValue={searchQuery}
@@ -401,6 +535,16 @@ const Index = () => {
                 urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
                 zIndex={0}
               />
+
+              {/* Add Route Path Visualization */}
+              {showRoutePath && state.selectedDevice && (
+                <RoutePath
+                  deviceId={state.selectedDevice.deviceId}
+                  fromDate={selectedFromDate}
+                  toDate={selectedToDate}
+                  visible={showRoutePath}
+                />
+              )}
 
               {/* Add Car Markers */}
               {filteredPositions.map((position) => (
@@ -424,6 +568,18 @@ const Index = () => {
             </MapView>
           )}
 
+          {/* Route Toggle Button */}
+          {state.selectedDevice && (
+            <TouchableOpacity
+              style={[styles.toggleButton, showRoutePath ? styles.toggleButtonActive : {}]}
+              onPress={toggleRouteVisibility}
+            >
+              <StyledText type="small" color={showRoutePath ? Colors.white : Colors.tint}>
+                {showRoutePath ? 'Hide Route' : 'Show Route'}
+              </StyledText>
+            </TouchableOpacity>
+          )}
+
           {state.selectedDevice && (
             <DeviceCard
               fromMap
@@ -431,6 +587,13 @@ const Index = () => {
               position={state.selectedDevice}
             />
           )}
+          
+          {/* Custom Date Range Picker */}
+          <DateRangePicker
+            visible={showDatePicker}
+            onClose={() => setShowDatePicker(false)}
+            onConfirm={handleCustomDateConfirm}
+          />
         </View>
       )}
     </>
@@ -476,6 +639,70 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'visible',
+  },
+  toggleButton: {
+    position: 'absolute',
+    bottom: DynamicSize(200),
+    right: DynamicSize(20),
+    backgroundColor: Colors.white,
+    borderRadius: DynamicSize(20),
+    paddingVertical: DynamicSize(8),
+    paddingHorizontal: DynamicSize(16),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: Colors.tint,
+  },
+  toggleButtonActive: {
+    backgroundColor: Colors.tint,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  datePickerContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: DynamicSize(12),
+    padding: DynamicSize(24),
+    width: '80%',
+    maxWidth: DynamicSize(350),
+  },
+  dateSelectors: {
+    marginTop: DynamicSize(24),
+    gap: DynamicSize(16),
+  },
+  dateSelector: {
+    gap: DynamicSize(8),
+  },
+  dateButton: {
+    borderWidth: 1,
+    borderColor: Colors.grey_20,
+    borderRadius: DynamicSize(4),
+    padding: DynamicSize(12),
+    backgroundColor: Colors.grey_0,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: DynamicSize(24),
+    gap: DynamicSize(12),
+  },
+  button: {
+    flex: 1,
+    padding: DynamicSize(12),
+    borderRadius: DynamicSize(4),
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: Colors.grey_10,
+  },
+  confirmButton: {
+    backgroundColor: Colors.tint,
   },
 });
 
